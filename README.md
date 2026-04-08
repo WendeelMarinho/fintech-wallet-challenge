@@ -263,7 +263,7 @@ Itens da entrega ainda por conta do processo de deploy: **repositório público 
 
 Combinações comuns:
 
-1. **API (Railway, Render, Fly.io, etc.)** — serviço PHP: `composer install`, `php artisan migrate --force`, variáveis `APP_KEY`, `DB_*`, `APP_URL`. Expor HTTPS; o CORS do projeto já permite origens amplas para chamadas com Bearer token.
+1. **API (Railway, Render, etc.)** — serviço PHP: `composer install`, `php artisan migrate --force`, variáveis `APP_KEY`, `DB_*`, `APP_URL`. Expor HTTPS; o CORS do projeto já permite origens amplas para chamadas com Bearer token.
 2. **SPA (Vercel / Netlify)** — build com `VITE_API_URL` apontando para a API; fazer deploy da pasta `dist/`.
 3. **Um só serviço** — possível servir `dist/` através do Laravel (rotas + `public/`), exigindo ajuste de `vite.config` e rotas web; não está pré-configurado neste MVP.
 

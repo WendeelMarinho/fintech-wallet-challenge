@@ -93,4 +93,106 @@ class WalletFlowTest extends TestCase
         $this->assertDatabaseHas('wallets', ['user_id' => $receiver->id, 'balance' => 1000.00]);
         $this->assertDatabaseCount('transactions', 0);
     }
+
+    public function test_transfer_decimal_amount_between_users(): void
+    {
+        $sender = User::factory()->create();
+        $receiver = User::factory()->create();
+        Wallet::create(['user_id' => $sender->id, 'balance' => 1000]);
+        Wallet::create(['user_id' => $receiver->id, 'balance' => 250.5]);
+
+        Sanctum::actingAs($sender);
+        $this->postJson('/api/transfer', [
+            'email' => $receiver->email,
+            'amount' => 33.47,
+        ])->assertOk()->assertJson(['success' => true]);
+
+        $this->assertDatabaseHas('wallets', ['user_id' => $sender->id, 'balance' => 966.53]);
+        $this->assertDatabaseHas('wallets', ['user_id' => $receiver->id, 'balance' => 283.97]);
+        $this->assertDatabaseCount('transactions', 2);
+    }
+
+    public function test_transfer_entire_balance_to_another_user(): void
+    {
+        $sender = User::factory()->create();
+        $receiver = User::factory()->create();
+        Wallet::create(['user_id' => $sender->id, 'balance' => 1000]);
+        Wallet::create(['user_id' => $receiver->id, 'balance' => 100]);
+
+        Sanctum::actingAs($sender);
+        $this->postJson('/api/transfer', [
+            'email' => $receiver->email,
+            'amount' => 1000,
+        ])->assertOk();
+
+        $this->assertDatabaseHas('wallets', ['user_id' => $sender->id, 'balance' => 0.00]);
+        $this->assertDatabaseHas('wallets', ['user_id' => $receiver->id, 'balance' => 1100.00]);
+    }
+
+    public function test_transfer_rejects_sending_to_self(): void
+    {
+        $user = User::factory()->create();
+        Wallet::create(['user_id' => $user->id, 'balance' => 1000]);
+
+        Sanctum::actingAs($user);
+        $this->postJson('/api/transfer', [
+            'email' => $user->email,
+            'amount' => 50,
+        ])->assertStatus(422)->assertJson(['success' => false]);
+
+        $this->assertDatabaseHas('wallets', ['user_id' => $user->id, 'balance' => 1000.00]);
+        $this->assertDatabaseCount('transactions', 0);
+    }
+
+    public function test_transfer_rejects_unknown_recipient_email(): void
+    {
+        $sender = User::factory()->create();
+        Wallet::create(['user_id' => $sender->id, 'balance' => 1000]);
+
+        Sanctum::actingAs($sender);
+        $this->postJson('/api/transfer', [
+            'email' => 'ninguem-existe@example.com',
+            'amount' => 10,
+        ])->assertStatus(422)->assertJson(['success' => false]);
+
+        $this->assertDatabaseHas('wallets', ['user_id' => $sender->id, 'balance' => 1000.00]);
+        $this->assertDatabaseCount('transactions', 0);
+    }
+
+    public function test_sequential_transfers_between_two_users(): void
+    {
+        $alice = User::factory()->create();
+        $bob = User::factory()->create();
+        Wallet::create(['user_id' => $alice->id, 'balance' => 1000]);
+        Wallet::create(['user_id' => $bob->id, 'balance' => 1000]);
+
+        Sanctum::actingAs($alice);
+        $this->postJson('/api/transfer', ['email' => $bob->email, 'amount' => 100])->assertOk();
+        $this->assertDatabaseHas('wallets', ['user_id' => $alice->id, 'balance' => 900.00]);
+        $this->assertDatabaseHas('wallets', ['user_id' => $bob->id, 'balance' => 1100.00]);
+
+        Sanctum::actingAs($bob);
+        $this->postJson('/api/transfer', ['email' => $alice->email, 'amount' => 300])->assertOk();
+        $this->assertDatabaseHas('wallets', ['user_id' => $alice->id, 'balance' => 1200.00]);
+        $this->assertDatabaseHas('wallets', ['user_id' => $bob->id, 'balance' => 800.00]);
+
+        $this->assertDatabaseCount('transactions', 4);
+    }
+
+    public function test_transfer_rejects_negative_amount_via_validation(): void
+    {
+        $sender = User::factory()->create();
+        $receiver = User::factory()->create();
+        Wallet::create(['user_id' => $sender->id, 'balance' => 1000]);
+        Wallet::create(['user_id' => $receiver->id, 'balance' => 1000]);
+
+        Sanctum::actingAs($sender);
+        $this->postJson('/api/transfer', [
+            'email' => $receiver->email,
+            'amount' => -50,
+        ])->assertStatus(422)->assertJson(['success' => false]);
+
+        $this->assertDatabaseHas('wallets', ['user_id' => $sender->id, 'balance' => 1000.00]);
+        $this->assertDatabaseHas('wallets', ['user_id' => $receiver->id, 'balance' => 1000.00]);
+    }
 }
