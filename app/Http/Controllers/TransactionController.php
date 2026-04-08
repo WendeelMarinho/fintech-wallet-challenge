@@ -14,6 +14,7 @@ class TransactionController extends Controller
         $user = $request->user();
 
         $query = Transaction::query()
+            ->with(['sender:id,name,email', 'receiver:id,name,email'])
             ->where(function ($q) use ($user) {
                 $q->where('sender_id', $user->id)
                     ->orWhere('receiver_id', $user->id);
@@ -39,6 +40,7 @@ class TransactionController extends Controller
     {
         $user = $request->user();
         $items = Transaction::query()
+            ->with(['sender:id,name,email', 'receiver:id,name,email'])
             ->where(function ($q) use ($user) {
                 $q->where('sender_id', $user->id)
                     ->orWhere('receiver_id', $user->id);

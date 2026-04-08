@@ -1,12 +1,29 @@
 <template>
-  <form @submit.prevent="send">
-    <h3>Transferir</h3>
-    <input v-model="email" placeholder="Email do destinatário" />
-    <input v-model.number="amount" type="number" step="0.01" placeholder="Valor" />
-    <button :disabled="loading">{{ loading ? "Enviando..." : "Transferir" }}</button>
-    <p v-if="error" style="color: #b00020">{{ error }}</p>
-    <p v-if="success" style="color: #0a7d32">{{ success }}</p>
-  </form>
+  <div class="card" style="margin-bottom: 1.25rem">
+    <h2 class="section-title" style="margin-top: 0">Nova transferência</h2>
+    <form class="form-stack" @submit.prevent="send">
+      <div class="form-field">
+        <label for="xfer-email">E-mail do destinatário</label>
+        <input id="xfer-email" v-model="email" type="email" autocomplete="off" placeholder="destinatario@email.com" />
+      </div>
+      <div class="form-field">
+        <label for="xfer-amount">Valor (R$)</label>
+        <input
+          id="xfer-amount"
+          v-model.number="amount"
+          type="number"
+          step="0.01"
+          min="0.01"
+          placeholder="0,00"
+        />
+      </div>
+      <button type="submit" class="btn btn-primary" :disabled="loading">
+        {{ loading ? "Enviando…" : "Transferir" }}
+      </button>
+      <p v-if="error" class="alert alert--error">{{ error }}</p>
+      <p v-if="success" class="alert alert--success">{{ success }}</p>
+    </form>
+  </div>
 </template>
 
 <script setup>

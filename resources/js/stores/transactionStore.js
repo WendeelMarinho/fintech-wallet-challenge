@@ -18,8 +18,13 @@ export const useTransactionStore = defineStore("transaction", {
       }
     },
     async fetchLatest() {
-      const { data } = await api.get("/transactions/latest");
-      this.items = data.data.data || [];
+      this.loading = true;
+      try {
+        const { data } = await api.get("/transactions/latest");
+        this.items = Array.isArray(data.data) ? data.data : [];
+      } finally {
+        this.loading = false;
+      }
     },
   },
 });
