@@ -2,6 +2,11 @@
 
 Projeto de desafio técnico com foco em simplicidade, clareza e funcionamento.
 
+## Aplicação em produção (Fly.io)
+
+- **URL:** [https://fintech-wallet.fly.dev/login](https://fintech-wallet.fly.dev/login)  
+  O SPA (Vue) e a API (`/api`) rodam no mesmo domínio; a rota `/login` é a entrada típica após redirecionamento do router.
+
 ## Visão geral
 
 - Registro, login e logout com Sanctum
@@ -206,6 +211,19 @@ Cenários cobertos em `tests/Feature/WalletFlowTest.php`:
 - Relatórios ou notas em `.md` (ex.: rascunhos técnicos) permanecem **apenas na sua máquina**, a menos que você mude o `.gitignore`.
 - **`.env` e variantes** (`.env.local`, `.env.backup`, etc.) estão ignoradas; **`.env.example`** é o modelo versionado — copie para `.env` e preencha localmente. Confira antes do push: `git status` não deve listar `.env`.
 
+## Dump local do MySQL (não versionado)
+
+Arquivos `.sql` em `storage/app/dumps/` **não entram no Git** (ver `storage/app/dumps/.gitignore`). Para gerar um dump usando as credenciais do seu `.env` local:
+
+```bash
+chmod +x scripts/dump-database.sh
+./scripts/dump-database.sh
+```
+
+O ficheiro padrão é `storage/app/dumps/fintech_wallet_dump.sql`. Outro caminho: `./scripts/dump-database.sh caminho/alternativo.sql`.
+
+Requisitos: cliente `mysqldump` instalado e servidor MySQL acessível em `DB_HOST` / `DB_PORT`.
+
 ## Variáveis do `.env` (referência rápida)
 
 Copie de `.env.example` e ajuste no mínimo:
@@ -235,9 +253,9 @@ Checklist em relação ao escopo **Carteira Digital P2P** (Teck Soluções):
 | **Service** para regra de negócio da transferência (controller fino) | OK |
 | **≥ 5 testes** Feature relevantes | OK (`WalletFlowTest`) |
 | Banco **MySQL** (ou Postgres; aqui MySQL) | OK (MySQL no `.env` de produção/dev) |
-| README: visão geral, decisões, como rodar, **link do deploy**, credenciais seed | **Substituir placeholders** em «Deploy» pelos links reais antes da entrega |
+| README: visão geral, decisões, como rodar, **link do deploy**, credenciais seed | OK — ver **Aplicação em produção (Fly.io)** no topo |
 
-Itens da entrega ainda por conta do processo de deploy: **repositório público GitHub**, **deploy funcional** em plataforma pública e **links no README** (o desafio pede backend + frontend acessíveis; pode ser um único domínio ou API + SPA conforme a plataforma).
+Itens da entrega: **repositório público GitHub**, **deploy funcional** na Fly.io em **https://fintech-wallet.fly.dev** (API + SPA no mesmo host).
 
 ## Checklist mínimo do README (desafio)
 
@@ -247,7 +265,7 @@ Itens da entrega ainda por conta do processo de deploy: **repositório público 
 - [x] Configurar `.env` (tabela acima + `.env.example`)  
 - [x] Migrations e seeders  
 - [x] Subir backend e frontend  
-- [ ] **Link público do deploy** (preencher abaixo)  
+- [x] **Link público do deploy** — https://fintech-wallet.fly.dev/login  
 - [x] Credenciais seed (`test@wallet.com` / `password`)  
 
 ## Frontend: desenvolvimento e atualizações
@@ -255,26 +273,18 @@ Itens da entrega ainda por conta do processo de deploy: **repositório público 
 - Código em `resources/js/` (páginas, componentes, Pinia, `api.js`, estilos).
 - **Local:** `npm run dev` — o proxy do Vite encaminha `/api` para o Laravel (`php artisan serve`).
 - **Alterar dependências:** atualize `package.json`, rode `npm install` e faça commit de `package.json` e `package-lock.json`.
-- **Produção (build estático):** `npm run build` gera a pasta **`dist/`** na raiz. Publique o conteúdo de `dist/` em Netlify, Vercel, Cloudflare Pages, S3+CDN, etc.
-- **API noutro domínio:** antes do build, defina no `.env` (ou no painel da plataforma) a variável **`VITE_API_URL`** com a URL **completa** da API, **incluindo** o sufixo `/api`, por exemplo `https://api.seuprojeto.com/api`. O `resources/js/api.js` usa isso em tempo de build; sem variável, mantém `/api` (mesma origem).
-- **Rotas do Vue Router:** em hospedagem estática, configure **fallback para `index.html`** (ex.: Netlify `_redirects` com `/* /index.html 200`, ou rewrites na Vercel) para `/transactions` e similares abrirem direto no browser.
+- **Produção (Fly / mesmo host que o Laravel):** `npm run build` gera **`public/build/`** (manifest + assets). O Blade `resources/views/app.blade.php` usa `@vite`; as rotas web fazem fallback para o SPA.
+- **API noutro domínio (opcional):** defina **`VITE_API_URL`** com a URL completa da API (incluindo `/api`). Sem variável, o frontend usa **`/api`** (mesma origem — caso Fly).
+- **Rotas do Vue Router:** com Laravel servindo o SPA, o fallback em `routes/web.php` cobre refreshes em `/transactions` etc.
 
-## Deploy na prática (desafio)
+## Deploy na prática (Fly.io)
 
-Combinações comuns:
+Este projeto está configurado para **um único app** na [Fly.io](https://fly.io): imagem Docker com estágio Node (`npm ci` + `npm run build`) e PHP (`composer install`, `artisan serve`). Variáveis importantes: `APP_KEY`, `APP_URL` (HTTPS), `DB_*`, e opcionalmente `ASSET_URL` se precisar forçar a origem dos assets.
 
-1. **API (Railway, Render, etc.)** — serviço PHP: `composer install`, `php artisan migrate --force`, variáveis `APP_KEY`, `DB_*`, `APP_URL`. Expor HTTPS; o CORS do projeto já permite origens amplas para chamadas com Bearer token.
-2. **SPA (Vercel / Netlify)** — build com `VITE_API_URL` apontando para a API; fazer deploy da pasta `dist/`.
-3. **Um só serviço** — possível servir `dist/` através do Laravel (rotas + `public/`), exigindo ajuste de `vite.config` e rotas web; não está pré-configurado neste MVP.
+- **App público:** https://fintech-wallet.fly.dev/login  
+- **API:** `https://fintech-wallet.fly.dev/api/...` (mesmo host)
 
-Após publicar, substitua os placeholders abaixo pelos URLs reais.
-
-## Deploy
-
-- **API (backend):** `https://backend-placeholder.example.com`  
-- **Frontend (SPA):** `https://frontend-placeholder.example.com`  
-
-*(Se usar um único host para API + assets, indique um link e explique numa linha.)*
+Deploy: `flyctl deploy` a partir da raiz do repositório (com `fly.toml` e `Dockerfile`).
 
 ## Commit e push (local)
 
